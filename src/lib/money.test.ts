@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { splitEqually, computeBalances } from "./money";
+import { splitEqually, computeBalances, settleUp } from "./money";
 
 describe("splitEqually", () => {
   test("£9 between three people", () => {
@@ -57,5 +57,29 @@ describe("computeBalances", () => {
       []
     );
     expect(result).toEqual({ A: 1000, B: -500, C: -500 });
+  });
+});
+
+describe("settleUp", () => {
+  test("four people, worked example", () => {
+    expect(settleUp({ A: 700, B: 300, C: -400, D: -600 })).toEqual([
+      { from: "D", to: "A", amountPence: 600 },
+      { from: "C", to: "B", amountPence: 300 },
+      { from: "C", to: "A", amountPence: 100 },
+    ]);
+  });
+
+  test("everyone already settled", () => {
+    expect(settleUp({ A: 0, B: 0 })).toEqual([]);
+  });
+
+  test("result from computeBalances", () => {
+    expect(settleUp({ A: 400, B: 0, C: -400 })).toEqual([
+      { from: "C", to: "A", amountPence: 400 },
+    ]);
+  });
+
+  test("throws if balances don't add up to 0", () => {
+    expect(() => settleUp({ A: 500, B: -200 })).toThrow();
   });
 });

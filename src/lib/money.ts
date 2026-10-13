@@ -64,6 +64,45 @@ export function computeBalances(
   }
   
    return balances;
+}
 
+//working on settleUp
+export type Transfer = {
+  from: string;
+  to: string;
+  amountPence: number;
+};
 
+export function settleUp(balances: Record<string, number>): Transfer[] {
+  const ids = Object.keys(balances);
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const total = Object.values(balances).reduce((sum, b) => sum + b, 0);
+  if (total !== 0) {
+    throw new Error("Balances must add up to 0");
+  }
+
+  const remaining = { ...balances };
+  const transfers: Transfer[] = [];
+
+  while (true) {
+    let creditor = ids[0];
+    let debtor = ids[0];
+    for (const id of ids) {
+      if (remaining[id] > remaining[creditor]) creditor = id;
+      if (remaining[id] < remaining[debtor]) debtor = id;
+    }
+
+    if (remaining[creditor] === 0) break;
+
+    const amount = Math.min(remaining[creditor], -remaining[debtor]);
+    transfers.push({ from: debtor, to: creditor, amountPence: amount });
+
+    remaining[creditor] -= amount;
+    remaining[debtor] += amount;
+  }
+
+  return transfers;
 }
