@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { supabase } from "../lib/supabase";
 
 export function LogIn() {
@@ -8,6 +8,8 @@ export function LogIn() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from ?? "/trips";
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -21,7 +23,7 @@ export function LogIn() {
       setError(error.message);
       return;
     }
-    navigate("/trips");
+    navigate(from, { replace: true });
   }
 
   return (
@@ -42,7 +44,7 @@ export function LogIn() {
         </button>
       </form>
       <p>
-        New here? <Link to="/signup">Create an account</Link>
+        New here? <Link to="/signup" state={{ from }}>Create an account</Link>
       </p>
     </main>
   );
