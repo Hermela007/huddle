@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
 import { supabase } from "../lib/supabase";
 import { formatDates } from "../lib/format";
 import { ExpensesTab } from "../components/ExpensesTab";
 import { BalancesTab } from "../components/BalancesTab";
+import { PollsTab } from "../components/PollsTab";
 
 type Trip = {
   id: string;
@@ -29,7 +30,11 @@ export function TripPage() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("expenses");
+  const [searchParams] = useSearchParams();
+  const startTab = searchParams.get("tab");
+  const [tab, setTab] = useState<Tab>(
+    startTab === "balances" || startTab === "polls" ? startTab : "expenses"
+  );
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -125,7 +130,7 @@ export function TripPage() {
 
       {tab === "expenses" && <ExpensesTab tripId={trip.id} organiserId={trip.organiser_id} />}
       {tab === "balances" && <BalancesTab tripId={trip.id} />}
-      {tab === "polls" && <p>Polls are coming in step 7.</p>}
+      {tab === "polls" && <PollsTab tripId={trip.id} organiserId={trip.organiser_id} />}
     </main>
   );
 }

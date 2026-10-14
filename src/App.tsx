@@ -7,6 +7,7 @@ import { NewTrip } from "./pages/NewTrip";
 import { TripPage } from "./pages/TripPage";
 import { JoinTrip } from "./pages/JoinTrip";
 import { ExpenseForm } from "./pages/ExpenseForm";
+import { NewPoll } from "./pages/NewPoll";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
       <Route path="/trips/:tripId" element={<RequireAuth><TripPage /></RequireAuth>} />
       <Route path="/trips/:tripId/expenses/new" element={<RequireAuth><ExpenseForm /></RequireAuth>} />
       <Route path="/trips/:tripId/expenses/:expenseId/edit" element={<RequireAuth><ExpenseForm /></RequireAuth>} />
+            <Route path="/trips/:tripId/polls/new" element={<RequireAuth><NewPoll /></RequireAuth>} />
       <Route path="/join/:code" element={<RequireAuth><JoinTrip /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/trips" replace />} />
     </Routes>
