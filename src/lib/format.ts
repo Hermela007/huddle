@@ -12,3 +12,7 @@ export function formatDates(start: string | null, end: string | null): string {
   if (end) return `Until ${formatDate(end)}`;
   return "No dates yet";
 }
+
+export function formatPence(pence: number): string {
+  return (pence / 100).toLocaleString("en-GB", { style: "currency", currency: "GBP" });
+}

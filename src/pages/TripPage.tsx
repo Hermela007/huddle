@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
 import { supabase } from "../lib/supabase";
 import { formatDates } from "../lib/format";
+import { ExpensesTab } from "../components/ExpensesTab";
 
 type Trip = {
   id: string;
@@ -121,7 +122,7 @@ export function TripPage() {
         <button onClick={() => setTab("polls")} aria-pressed={tab === "polls"}>Polls</button>
       </nav>
 
-      {tab === "expenses" && <p>Expenses are coming in step 5.</p>}
+      {tab === "expenses" && <ExpensesTab tripId={trip.id} organiserId={trip.organiser_id} />}
       {tab === "balances" && <p>Balances are coming in step 6.</p>}
       {tab === "polls" && <p>Polls are coming in step 7.</p>}
     </main>
