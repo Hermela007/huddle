@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { supabase } from "../lib/supabase";
 import { formatDates } from "../lib/format";
 import { ExpensesTab } from "../components/ExpensesTab";
+import { BalancesTab } from "../components/BalancesTab";
 
 type Trip = {
   id: string;
@@ -123,7 +124,7 @@ export function TripPage() {
       </nav>
 
       {tab === "expenses" && <ExpensesTab tripId={trip.id} organiserId={trip.organiser_id} />}
-      {tab === "balances" && <p>Balances are coming in step 6.</p>}
+      {tab === "balances" && <BalancesTab tripId={trip.id} />}
       {tab === "polls" && <p>Polls are coming in step 7.</p>}
     </main>
   );
