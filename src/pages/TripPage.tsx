@@ -98,7 +98,11 @@ export function TripPage() {
   }
 
   const isOrganiser = session?.user.id === trip.organiser_id;
-  const inviteLink = `${window.location.origin}/join/${trip.invite_code}`;
+  // Invite links always point at the live site (VITE_SITE_URL), so a link
+  // copied while running locally still works for friends. Falls back to the
+  // current address if the variable isn't set.
+  const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+  const inviteLink = `${siteUrl}/join/${trip.invite_code}`;
 
   async function copyLink() {
     await navigator.clipboard.writeText(inviteLink);
