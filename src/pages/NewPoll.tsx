@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { supabase } from "../lib/supabase";
 import { MAX_OPTIONS, MIN_OPTIONS, pollFormError } from "../lib/polls";
+import { BackLink, ErrorMessage, PageShell, PlusIcon } from "../components/ui";
+import { btnPrimary, btnQuiet, btnText, h1Small, input, label } from "../lib/styles";
 
 export function NewPoll() {
   const { tripId } = useParams<{ tripId: string }>();
@@ -50,21 +52,22 @@ export function NewPoll() {
   }
 
   return (
-    <main>
-      <Link to={`/trips/${tripId}?tab=polls`}>← Back to trip</Link>
-      <h1>New poll</h1>
+    <PageShell>
+      <BackLink to={`/trips/${tripId}?tab=polls`}>Back to trip</BackLink>
+      <h1 className={h1Small}>New poll</h1>
 
-      <form onSubmit={handleSubmit}>
-        <label>
+      <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4">
+        <label className={label}>
           Question
-          <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Which weekend works?" maxLength={200} />
+          <input className={input} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Which weekend works?" maxLength={200} />
         </label>
 
-        <fieldset>
-          <legend>Options</legend>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1.5 text-sm font-semibold">Options</legend>
           {options.map((option, i) => (
-            <div key={i}>
+            <div key={i} className="flex items-center gap-2">
               <input
+                className={input}
                 value={option}
                 onChange={(e) => updateOption(i, e.target.value)}
                 placeholder={`Option ${i + 1}`}
@@ -72,25 +75,27 @@ export function NewPoll() {
                 maxLength={100}
               />
               {options.length > MIN_OPTIONS && (
-                <button type="button" onClick={() => removeOption(i)}>
+                <button type="button" onClick={() => removeOption(i)} className={btnText} aria-label={`Remove option ${i + 1}`}>
                   Remove
                 </button>
               )}
             </div>
           ))}
           {options.length < MAX_OPTIONS && (
-            <button type="button" onClick={addOption}>
-              + Add option
+            <button type="button" onClick={addOption} className={`${btnQuiet} self-start`}>
+              <PlusIcon />
+              Add option
             </button>
           )}
+          <p className="text-[13px] font-medium text-muted">Between {MIN_OPTIONS} and {MAX_OPTIONS} options.</p>
         </fieldset>
 
-        {error && <p role="alert">{error}</p>}
+        {error && <ErrorMessage>{error}</ErrorMessage>}
 
-        <button type="submit" disabled={saving}>
+        <button type="submit" disabled={saving} className={`${btnPrimary} mt-auto`}>
           {saving ? "Creating…" : "Create poll"}
         </button>
       </form>
-    </main>
+    </PageShell>
   );
 }

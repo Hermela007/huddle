@@ -4,6 +4,8 @@ import { supabase } from "../lib/supabase";
 import { fetchMembers, type Member } from "../lib/members";
 import { computeBalances, settleUp, type Expense, type Payment, type Transfer } from "../lib/money";
 import { formatPence } from "../lib/format";
+import { Avatar, ErrorMessage, LoadingRows } from "./ui";
+import { btnQuiet, btnText, h2 } from "../lib/styles";
 
 type ExpenseRow = {
   amount_pence: number;
@@ -27,6 +29,8 @@ export function BalancesTab({ tripId }: { tripId: string }) {
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [plan, setPlan] = useState<Transfer[]>([]);
   const [history, setHistory] = useState<PaymentRow[]>([]);
+  const [tripTotal, setTripTotal] = useState(0);
+  const [myShareTotal, setMyShareTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -72,6 +76,8 @@ export function BalancesTab({ tripId }: { tripId: string }) {
         setBalances(newBalances);
         setPlan(settleUp(newBalances));
         setHistory(paymentRows);
+        setTripTotal(expenses.reduce((sum, e) => sum + e.amountPence, 0));
+        setMyShareTotal(expenses.reduce((sum, e) => sum + (myId ? e.shares[myId] ?? 0 : 0), 0));
         setError(null);
       } catch (err) {
         setError((err as { message?: string }).message ?? "Couldn't load balances");
@@ -80,23 +86,22 @@ export function BalancesTab({ tripId }: { tripId: string }) {
     }
 
     load();
-  }, [tripId, version]);
+  }, [tripId, version, myId]);
 
   const nameOf = (userId: string) => members.find((m) => m.userId === userId)?.displayName ?? "Unknown";
   const involvesMe = (t: { from: string; to: string }) => t.from === myId || t.to === myId;
 
-  // "You pay Sam £5.00" / "Jo pays you £12.50" / "Jo pays Sam £3.00"
+  // "You pay Sam" / "Jo pays you" / "Jo pays Sam" (the amount is shown separately)
   function describeTransfer(t: Transfer): string {
     const payer = t.from === myId ? "You pay" : `${nameOf(t.from)} pays`;
     const receiver = t.to === myId ? "you" : nameOf(t.to);
-    return `${payer} ${receiver} ${formatPence(t.amountPence)}`;
+    return `${payer} ${receiver}`;
   }
 
   function describePayment(p: PaymentRow): string {
     const payer = p.from_user === myId ? "You paid" : `${nameOf(p.from_user)} paid`;
     const receiver = p.to_user === myId ? "you" : nameOf(p.to_user);
-    const date = new Date(p.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-    return `${payer} ${receiver} ${formatPence(p.amount_pence)} · ${date}`;
+    return `${payer} ${receiver} ${formatPence(p.amount_pence)}`;
   }
 
   function describeBalance(pence: number): string {
@@ -144,75 +149,103 @@ export function BalancesTab({ tripId }: { tripId: string }) {
     setVersion((v) => v + 1);
   }
 
-  if (loading) return <p>Loading balances…</p>;
-  if (error) return <p role="alert">{error}</p>;
+  if (loading) return <LoadingRows count={4} />;
+  if (error) return <ErrorMessage>{error}</ErrorMessage>;
 
   const myBalance = myId ? balances[myId] ?? 0 : 0;
   // Your own payments first; sort is stable, so the rest keep settleUp's order
   const sortedPlan = [...plan].sort((a, b) => Number(involvesMe(b)) - Number(involvesMe(a)));
 
   return (
-    <section>
-      <h2>
-        {myBalance > 0 && `You're owed ${formatPence(myBalance)}`}
-        {myBalance < 0 && `You owe ${formatPence(-myBalance)} in total`}
-        {myBalance === 0 && "You're all settled up"}
-      </h2>
+    <section className="flex flex-col gap-5">
+      {/* Your summary */}
+      <div className="flex flex-col gap-0.5 rounded-card bg-coral-soft px-5 py-4">
+        <span className="text-sm font-semibold text-muted">
+          {myBalance > 0 ? "You're owed" : myBalance < 0 ? "You owe" : "You're all settled up"}
+        </span>
+        {myBalance !== 0 && (
+          <span className="text-[38px] font-extrabold leading-tight tracking-tight tabular-nums">
+            {formatPence(Math.abs(myBalance))}
+          </span>
+        )}
+        <span className="text-sm text-muted tabular-nums">
+          Trip total {formatPence(tripTotal)} · your share {formatPence(myShareTotal)}
+        </span>
+      </div>
 
-      <h3>Everyone</h3>
-      <ul>
-        {members.map((m) => (
-          <li key={m.userId}>
-            {m.userId === myId ? (
-              <strong>You {describeBalance(balances[m.userId] ?? 0).replace("is ", "are ")}</strong>
-            ) : (
-              `${m.displayName} ${describeBalance(balances[m.userId] ?? 0)}`
-            )}
-          </li>
-        ))}
-      </ul>
+      {/* Settle-up plan */}
+      <div className="flex flex-col gap-2">
+        <h2 className={h2}>Settle up</h2>
+        {sortedPlan.length === 0 ? (
+          <p className="rounded-card bg-surface px-4 py-4 text-[15px] font-semibold">Everyone's settled up!</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {sortedPlan.map((t, i) => {
+              const other = t.from === myId ? t.to : t.from;
+              return (
+                <li key={`${t.from}-${t.to}-${i}`} className="flex items-center gap-3 rounded-card bg-surface py-1.5 pl-3 pr-1.5">
+                  <Avatar name={nameOf(other)} seed={other} size={34} />
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm text-muted">{describeTransfer(t)}</span>
+                    <span className="text-base font-bold tabular-nums">{formatPence(t.amountPence)}</span>
+                  </div>
+                  {involvesMe(t) ? (
+                    <button type="button" onClick={() => markAsPaid(t)} disabled={busy} className={btnQuiet}>
+                      Mark paid
+                    </button>
+                  ) : (
+                    <span className="h-11" />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
 
-      <h3>Settle up</h3>
-      {sortedPlan.length === 0 ? (
-        <p>Everyone's settled up! 🎉</p>
-      ) : (
-        <ul>
-          {sortedPlan.map((t) => (
-            <li key={`${t.from}-${t.to}`}>
-              {describeTransfer(t)}
-              {involvesMe(t) && (
-                <>
-                  {" "}
-                  <button onClick={() => markAsPaid(t)} disabled={busy}>
-                    Mark as paid
-                  </button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* Everyone's balance */}
+      <div className="flex flex-col gap-1">
+        <h2 className={`${h2} mb-1`}>Everyone</h2>
+        {members.map((m) => {
+          const pence = balances[m.userId] ?? 0;
+          const colour = pence > 0 ? "text-owed" : pence < 0 ? "text-owes" : "text-muted";
+          const isMe = m.userId === myId;
+          return (
+            <div key={m.userId} className="flex min-h-8 items-center justify-between text-[15px]">
+              <span className={isMe ? "font-bold" : "font-medium"}>{isMe ? "You" : m.displayName}</span>
+              <span className={`font-semibold tabular-nums ${colour}`}>
+                {isMe ? describeBalance(pence).replace("is ", "are ") : describeBalance(pence)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
 
-      <h3>Payment history</h3>
-      {history.length === 0 ? (
-        <p>No payments recorded yet.</p>
-      ) : (
-        <ul>
-          {history.map((p) => (
-            <li key={p.id}>
-              {describePayment(p)}
-              {involvesMe({ from: p.from_user, to: p.to_user }) && (
-                <>
-                  {" "}
-                  <button onClick={() => undoPayment(p)} disabled={busy}>
+      {/* Payment history */}
+      <div className="flex flex-col gap-1">
+        <h2 className={`${h2} mb-1`}>Payment history</h2>
+        {history.length === 0 ? (
+          <p className="text-[15px] text-muted">No payments recorded yet.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-divider">
+            {history.map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-3 py-1.5">
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate text-[15px] font-medium tabular-nums">{describePayment(p)}</span>
+                  <span className="text-[13px] text-muted">
+                    {new Date(p.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  </span>
+                </div>
+                {involvesMe({ from: p.from_user, to: p.to_user }) && (
+                  <button type="button" onClick={() => undoPayment(p)} disabled={busy} className={btnText}>
                     Undo
                   </button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }

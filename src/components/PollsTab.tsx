@@ -4,6 +4,8 @@ import { useAuth } from "../auth/AuthProvider";
 import { supabase } from "../lib/supabase";
 import { fetchMembers, type Member } from "../lib/members";
 import { describeResult, summarisePoll } from "../lib/polls";
+import { ErrorMessage, LoadingRows, PlusIcon } from "./ui";
+import { btnDanger, btnPrimary, btnText } from "../lib/styles";
 
 type PollRow = {
   id: string;
@@ -113,7 +115,7 @@ export function PollsTab({ tripId, organiserId }: { tripId: string; organiserId:
     setVersion((v) => v + 1);
   }
 
-  if (loading) return <p>Loading polls…</p>;
+  if (loading) return <LoadingRows count={2} height="h-48" />;
 
   // Open polls first, then closed. The query already returned newest first,
   // and sort is stable, so each group stays newest first.
@@ -122,11 +124,19 @@ export function PollsTab({ tripId, organiserId }: { tripId: string; organiserId:
   );
 
   return (
-    <section>
-      <Link to={`/trips/${tripId}/polls/new`}>+ New poll</Link>
-      {error && <p role="alert">{error}</p>}
+    <section className="flex flex-col gap-4">
+      <Link to={`/trips/${tripId}/polls/new`} className={btnPrimary}>
+        <PlusIcon />
+        New poll
+      </Link>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      {sortedPolls.length === 0 && <p>No polls yet.</p>}
+      {sortedPolls.length === 0 && (
+        <div className="rounded-card bg-surface px-5 py-8 text-center">
+          <p className="font-bold">No polls yet</p>
+          <p className="mt-1 text-[15px] text-muted">Ask the group which dates, train or place works best.</p>
+        </div>
+      )}
 
       {sortedPolls.map((poll) => {
         const isOpen = poll.closed_at === null;
@@ -138,42 +148,76 @@ export function PollsTab({ tripId, organiserId }: { tripId: string; organiserId:
         const myVote = poll.poll_votes.find((v) => v.user_id === myId)?.option_id;
 
         return (
-          <article key={poll.id}>
-            <h3>{poll.question}</h3>
-            <p>
-              {isOpen ? "Open" : `Closed · ${describeResult(summary)}`} · asked by {nameOf(poll.created_by)} ·{" "}
-              {summary.totalVotes} {summary.totalVotes === 1 ? "vote" : "votes"}
-            </p>
+          <article key={poll.id} className="flex flex-col gap-3 rounded-card bg-surface p-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                    isOpen ? "bg-owed-soft text-owed" : "bg-settled-soft text-muted"
+                  }`}
+                >
+                  {isOpen ? "Open" : "Closed"}
+                </span>
+                <span className="text-[13px] text-muted">
+                  asked by {nameOf(poll.created_by)} · {summary.totalVotes} {summary.totalVotes === 1 ? "vote" : "votes"}
+                </span>
+              </div>
+              <h3 className="text-[17px] font-bold">{poll.question}</h3>
+              {!isOpen && <p className="text-[15px] font-semibold text-coral">{describeResult(summary)}</p>}
+            </div>
 
-            <ul>
-              {summary.options.map((o) => (
-                <li key={o.id}>
-                  <strong>{o.label}</strong>: {o.count} {o.count === 1 ? "vote" : "votes"}
-                  {o.voterIds.length > 0 && ` (${o.voterIds.map(nameOf).join(", ")})`}
-                  {myVote === o.id && " ✓ Your vote"}
-                  {isOpen && myVote !== o.id && (
-                    <>
-                      {" "}
-                      <button onClick={() => vote(poll.id, o.id)} disabled={busy}>
-                        {myVote ? "Change to this" : "Vote"}
-                      </button>
-                    </>
-                  )}
-                </li>
-              ))}
+            <ul className="flex flex-col gap-2">
+              {summary.options.map((o) => {
+                const mine = myVote === o.id;
+                const percent = summary.totalVotes === 0 ? 0 : Math.round((o.count / summary.totalVotes) * 100);
+                const canVote = isOpen && !mine;
+                return (
+                  <li key={o.id}>
+                    <button
+                      type="button"
+                      disabled={!canVote || busy}
+                      onClick={() => vote(poll.id, o.id)}
+                      aria-pressed={mine}
+                      className={`relative block w-full overflow-hidden rounded-xl border bg-white text-left outline-none focus-visible:outline-2 focus-visible:outline-coral ${
+                        mine ? "border-coral" : "border-line"
+                      } ${canVote ? "transition-transform duration-150 ease-snappy active:scale-[0.985]" : ""}`}
+                    >
+                      {/* Bar showing this option's share of the votes */}
+                      <span
+                        aria-hidden="true"
+                        className={`absolute inset-y-0 left-0 ${mine ? "bg-coral-soft" : "bg-track"}`}
+                        style={{ width: `${percent}%` }}
+                      />
+                      <span className="relative flex min-h-12 items-center justify-between gap-3 px-3.5 py-2">
+                        <span className="flex min-w-0 flex-col">
+                          <span className="text-[15px] font-semibold">
+                            {o.label}
+                            {mine && <span className="ml-1.5 text-[13px] font-bold text-coral">✓ Your vote</span>}
+                          </span>
+                          {o.voterIds.length > 0 && (
+                            <span className="truncate text-[13px] text-muted">{o.voterIds.map(nameOf).join(", ")}</span>
+                          )}
+                        </span>
+                        <span className="shrink-0 text-sm font-bold tabular-nums">{o.count}</span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
+            {isOpen && !myVote && <p className="text-[13px] text-muted">Tap an option to vote.</p>}
 
             {canManage(poll) && (
-              <p>
+              <div className="-ml-3 flex gap-1">
                 {isOpen && (
-                  <button onClick={() => closePoll(poll)} disabled={busy}>
+                  <button type="button" onClick={() => closePoll(poll)} disabled={busy} className={btnText}>
                     Close poll
                   </button>
-                )}{" "}
-                <button onClick={() => deletePoll(poll)} disabled={busy}>
-                  Delete poll
+                )}
+                <button type="button" onClick={() => deletePoll(poll)} disabled={busy} className={btnDanger}>
+                  Delete
                 </button>
-              </p>
+              </div>
             )}
           </article>
         );

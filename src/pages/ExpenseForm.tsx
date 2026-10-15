@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
 import { supabase } from "../lib/supabase";
 import { fetchMembers, type Member } from "../lib/members";
 import { amountError, parsePoundsToPence, splitEqually } from "../lib/money";
 import { formatPence } from "../lib/format";
+import { BackLink, ErrorMessage, LoadingRows, PageShell } from "../components/ui";
+import { btnDanger, btnPrimary, chip, h1Small, input, label } from "../lib/styles";
 
 const WARN_ABOVE_PENCE = 100_000; // £1,000
-
 
 type ExistingExpense = {
   description: string;
@@ -80,6 +81,14 @@ export function ExpenseForm() {
     );
   }
 
+  // Keep JOIN ORDER: filter the members list (already sorted) instead of using includedIds directly
+  const orderedIncluded = members.filter((m) => includedIds.includes(m.userId)).map((m) => m.userId);
+
+  // Live preview of each person's share, using the same splitEqually that saves it
+  const previewPence = amountError(amount) === null ? parsePoundsToPence(amount) : null;
+  const previewShares: Record<string, number> =
+    previewPence !== null && orderedIncluded.length > 0 ? splitEqually(previewPence, orderedIncluded) : {};
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!tripId) return;
@@ -94,11 +103,6 @@ export function ExpenseForm() {
     if (amountPence > WARN_ABOVE_PENCE && !confirm(`That's ${formatPence(amountPence)}. Is that right?`)) {
       return;
     }
-
-    // Keep JOIN ORDER: filter the members list (already sorted) instead of using includedIds directly
-    const orderedIncluded = members
-      .filter((m) => includedIds.includes(m.userId))
-      .map((m) => m.userId);
 
     if (orderedIncluded.length === 0) {
       setError("Tick at least one person to share this expense");
@@ -145,62 +149,103 @@ export function ExpenseForm() {
     navigate(`/trips/${tripId}`);
   }
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) {
+    return (
+      <PageShell>
+        <LoadingRows count={4} />
+      </PageShell>
+    );
+  }
+
+  const myId = session?.user.id;
+  const eachText =
+    previewPence !== null && orderedIncluded.length > 0
+      ? `${formatPence(Math.floor(previewPence / orderedIncluded.length))} each · split ${orderedIncluded.length} ${orderedIncluded.length === 1 ? "way" : "ways"}`
+      : "Typed in pounds, like 12.50";
 
   return (
-    <main>
-      <Link to={`/trips/${tripId}`}>← Back to trip</Link>
-      <h1>{isEditing ? "Edit expense" : "Add expense"}</h1>
+    <PageShell>
+      <BackLink to={`/trips/${tripId}`}>Back to trip</BackLink>
+      <h1 className={h1Small}>{isEditing ? "Edit expense" : "Add expense"}</h1>
 
-      <form onSubmit={handleSubmit}>
-        <label>
+      <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4">
+        <label className={label}>
+          Amount
+          <span className="flex h-16 items-center gap-1.5 rounded-card bg-surface px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-coral">
+            <span aria-hidden="true" className="text-[30px] font-bold text-muted">£</span>
+            <input
+              inputMode="decimal"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+              className="w-full min-w-0 bg-transparent text-[30px] font-extrabold tabular-nums text-ink outline-none placeholder:text-muted/50"
+            />
+          </span>
+          <span className="text-[13px] font-medium text-muted tabular-nums">{eachText}</span>
+        </label>
+
+        <label className={label}>
           What was it for?
-          <input value={description} onChange={(e) => setDescription(e.target.value)} required maxLength={100} />
-        </label>
-
-        <label>
-          Amount (£)
-          <input inputMode="decimal" placeholder="12.50" value={amount} onChange={(e) => setAmount(e.target.value)} required />
-        </label>
-
-        <label>
-          Paid by
-          <select value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
-            {members.map((m) => (
-              <option key={m.userId} value={m.userId}>
-                {m.displayName}
-                {m.userId === session?.user.id ? " (you)" : ""}
-              </option>
-            ))}
-          </select>
+          <input className={input} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Dinner, train tickets…" required maxLength={100} />
         </label>
 
         <fieldset>
-          <legend>Split equally between</legend>
-          {members.map((m) => (
-            <label key={m.userId}>
-              <input type="checkbox" checked={includedIds.includes(m.userId)} onChange={() => toggleIncluded(m.userId)} />
-              {m.displayName}
-            </label>
-          ))}
+          <legend className="mb-2 text-sm font-semibold">Paid by</legend>
+          <div className="flex flex-wrap gap-2">
+            {members.map((m) => {
+              const active = paidBy === m.userId;
+              return (
+                <button
+                  key={m.userId}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setPaidBy(m.userId)}
+                  className={`${chip} ${active ? "border-coral bg-coral text-white" : "border-surface bg-surface text-ink"}`}
+                >
+                  {m.userId === myId ? "You" : m.displayName}
+                </button>
+              );
+            })}
+          </div>
         </fieldset>
 
-        <label>
+        <fieldset>
+          <legend className="mb-2 text-sm font-semibold">Split equally between</legend>
+          <div className="flex flex-col divide-y divide-divider overflow-hidden rounded-card bg-surface">
+            {members.map((m) => {
+              const included = includedIds.includes(m.userId);
+              return (
+                <label key={m.userId} className="flex h-11 items-center gap-3 px-3.5 text-[15px] font-medium">
+                  <input type="checkbox" checked={included} onChange={() => toggleIncluded(m.userId)} className="size-5 accent-coral" />
+                  <span className="flex-1">{m.userId === myId ? "You" : m.displayName}</span>
+                  <span className="text-muted tabular-nums">
+                    {included && previewShares[m.userId] !== undefined ? formatPence(previewShares[m.userId]) : ""}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <label className={label}>
           Date
-          <input type="date" value={spentOn} onChange={(e) => setSpentOn(e.target.value)} required />
+          <input className={input} type="date" value={spentOn} onChange={(e) => setSpentOn(e.target.value)} required />
         </label>
 
-        {error && <p role="alert">{error}</p>}
+        {error && <ErrorMessage>{error}</ErrorMessage>}
 
-        <button type="submit" disabled={saving}>
-          {saving ? "Saving…" : isEditing ? "Save changes" : "Add expense"}
-        </button>
-        {isEditing && (
-          <button type="button" onClick={handleDelete} disabled={saving}>
-            Delete expense
+        <div className="mt-auto flex flex-col gap-1 pt-2">
+          <button type="submit" disabled={saving} className={btnPrimary}>
+            {saving ? "Saving…" : isEditing ? "Save changes" : "Add expense"}
           </button>
-        )}
+          {isEditing && (
+            <button type="button" onClick={handleDelete} disabled={saving} className={`${btnDanger} self-center`}>
+              Delete expense
+            </button>
+          )}
+        </div>
       </form>
-    </main>
+    </PageShell>
   );
 }

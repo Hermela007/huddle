@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { supabase } from "../lib/supabase";
+import { ErrorMessage, PageShell, Skeleton, TripCover } from "../components/ui";
+import { btnPrimary, btnQuiet, h1Small } from "../lib/styles";
 
 type Preview = { id: string; name: string; organiser_name: string };
 
@@ -42,27 +44,43 @@ export function JoinTrip() {
     navigate(`/trips/${data}`, { replace: true });
   }
 
-  if (loading) return <p>Loading invite…</p>;
+  if (loading) {
+    return (
+      <PageShell>
+        <Skeleton className="mt-10 h-72" />
+      </PageShell>
+    );
+  }
 
   if (!preview) {
     return (
-      <main>
-        <h1>Invite not found</h1>
-        <p>This link may be wrong, or the organiser may have reset it.</p>
-        {error && <p role="alert">{error}</p>}
-        <Link to="/trips">Go to my trips</Link>
-      </main>
+      <PageShell>
+        <span className="pt-6 text-2xl font-extrabold tracking-tight text-coral">huddle</span>
+        <h1 className={h1Small}>Invite not found</h1>
+        <p className="text-[15px] text-muted">This link may be wrong, or the organiser may have reset it. Ask them for a new one.</p>
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+        <Link to="/trips" className={btnQuiet}>
+          Go to my trips
+        </Link>
+      </PageShell>
     );
   }
 
   return (
-    <main>
-      <h1>Join {preview.name}?</h1>
-      <p>{preview.organiser_name} invited you to plan this trip on Huddle.</p>
-      {error && <p role="alert">{error}</p>}
-      <button onClick={handleJoin} disabled={joining}>
+    <PageShell>
+      <span className="pt-6 text-2xl font-extrabold tracking-tight text-coral">huddle</span>
+      <div className="overflow-hidden rounded-card bg-surface">
+        <TripCover name={preview.name} height={120} />
+        <div className="flex flex-col gap-1.5 p-5">
+          <p className="text-sm font-semibold text-muted">{preview.organiser_name} invited you to</p>
+          <h1 className={h1Small}>{preview.name}</h1>
+        </div>
+      </div>
+      <p className="text-[15px] text-muted">Join to see the trip, add expenses, split costs and vote on plans together.</p>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      <button type="button" onClick={handleJoin} disabled={joining} className={btnPrimary}>
         {joining ? "Joining…" : "Join trip"}
       </button>
-    </main>
+    </PageShell>
   );
 }

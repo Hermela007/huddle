@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { supabase } from "../lib/supabase";
+import { ErrorMessage, PageShell } from "../components/ui";
+import { btnPrimary, h1, input, label } from "../lib/styles";
 
 export function LogIn() {
   const [email, setEmail] = useState("");
@@ -27,25 +29,34 @@ export function LogIn() {
   }
 
   return (
-    <main>
-      <h1>Log in to Huddle</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
+    <PageShell>
+      <span className="pt-6 text-2xl font-extrabold tracking-tight text-coral">huddle</span>
+      <div className="flex flex-col gap-1.5">
+        <h1 className={h1}>Welcome back</h1>
+        <p className="text-[15px] text-muted">Log in to see your trips.</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <label className={label}>
           Email
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input className={input} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
-        <label>
+        <label className={label}>
           Password
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <input className={input} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
-        {error && <p role="alert">{error}</p>}
-        <button type="submit" disabled={submitting}>
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+        <button type="submit" disabled={submitting} className={btnPrimary}>
           {submitting ? "Logging in…" : "Log in"}
         </button>
       </form>
-      <p>
-        New here? <Link to="/signup" state={{ from }}>Create an account</Link>
+
+      <p className="text-center text-[15px] text-muted">
+        New here?{" "}
+        <Link to="/signup" state={{ from }} className="font-bold text-coral">
+          Create an account
+        </Link>
       </p>
-    </main>
+    </PageShell>
   );
 }
