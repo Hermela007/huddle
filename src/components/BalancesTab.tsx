@@ -192,7 +192,7 @@ export function BalancesTab({ tripId }: { tripId: string }) {
                   {t.to === myId ? (
                     <button type="button" onClick={() => markAsPaid(t)} disabled={busy} className={btnQuiet}>
                       Mark received
-                      </button>
+                    </button>
                   ) : (
                     <span className="h-11" />
                   )}

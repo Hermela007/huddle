@@ -6,6 +6,8 @@ Huddle is a group trip planner. You create a trip and share an invite link. Ever
 
 **Live app:** https://huddle-hh-9a09.vercel.app
 
+🔒 See [SECURITY.md](SECURITY.md) for the OWASP Top 10 review I ran on this app.
+
 <p>
   <img src="docs/screenshots/trips.png" alt="Your trips" width="240">
   <img src="docs/screenshots/balances.png" alt="Balances and settle-up" width="240">
@@ -79,4 +81,4 @@ supabase/       schema, RLS policies and SQL functions
 - Trip cover photos
 - Unequal splits (by amount or percentage)
 - Real-time updates when friends add expenses
-- Partial payments and receiver confirmation
+- Partial payments
