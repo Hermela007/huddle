@@ -189,10 +189,10 @@ export function BalancesTab({ tripId }: { tripId: string }) {
                     <span className="truncate text-sm text-muted">{describeTransfer(t)}</span>
                     <span className="text-base font-bold tabular-nums">{formatPence(t.amountPence)}</span>
                   </div>
-                  {involvesMe(t) ? (
+                  {t.to === myId ? (
                     <button type="button" onClick={() => markAsPaid(t)} disabled={busy} className={btnQuiet}>
-                      Mark paid
-                    </button>
+                      Mark received
+                      </button>
                   ) : (
                     <span className="h-11" />
                   )}

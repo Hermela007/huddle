@@ -5,6 +5,9 @@ import { AuthProvider } from "./auth/AuthProvider";
 import App from "./App";
 import "./index.css";
 
+import { supabase } from "./lib/supabase";
+if (import.meta.env.DEV) (window as any).sb = supabase;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
