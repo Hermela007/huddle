@@ -22,7 +22,11 @@ export function LogIn() {
 
     setSubmitting(false);
     if (error) {
-      setError(error.message);
+      setError(
+        error.message === "Email not confirmed"
+          ? "Please confirm your email first. Check your inbox for the link we sent."
+          : error.message,
+      );
       return;
     }
     navigate(from, { replace: true });

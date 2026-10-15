@@ -10,6 +10,8 @@ export function SignUp() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Set when Supabase needs the user to confirm their email before logging in
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/trips";
@@ -19,10 +21,15 @@ export function SignUp() {
     setError(null);
     setSubmitting(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName.trim() } },
+      options: {
+        data: { display_name: displayName.trim() },
+        // The confirmation link brings them back to where they were heading
+        // (e.g. an invite link), not just the home page
+        emailRedirectTo: `${window.location.origin}${from}`,
+      },
     });
 
     setSubmitting(false);
@@ -30,7 +37,33 @@ export function SignUp() {
       setError(error.message);
       return;
     }
+    // No session means "Confirm email" is on: they must click the link first
+    if (!data.session) {
+      setSentTo(email);
+      return;
+    }
     navigate(from, { replace: true });
+  }
+
+  if (sentTo) {
+    return (
+      <PageShell>
+        <span className="pt-6 text-2xl font-extrabold tracking-tight text-coral">huddle</span>
+        <div className="flex flex-col gap-1.5">
+          <h1 className={h1}>Check your email</h1>
+          <p className="text-[15px] text-muted">
+            We sent a confirmation link to <span className="font-bold text-ink">{sentTo}</span>. Click it to finish
+            creating your account. It might be in your spam folder.
+          </p>
+        </div>
+        <p className="text-center text-[15px] text-muted">
+          Already confirmed?{" "}
+          <Link to="/login" state={{ from }} className="font-bold text-coral">
+            Log in
+          </Link>
+        </p>
+      </PageShell>
+    );
   }
 
   return (
