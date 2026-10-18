@@ -28,7 +28,7 @@ Huddle is a group trip planner. You create a trip and share an invite link. Ever
 | Layer | Choice |
 |---|---|
 | Frontend | React 19, TypeScript, Vite, React Router |
-| Styling | Tailwind CSS v4 (design tokens in `@theme`), designed in Figma |
+| Styling | Tailwind CSS v4 (design tokens in `@theme`) |
 | Backend | Supabase: Postgres, Auth, Row Level Security, SQL functions |
 | Testing | Vitest (47 unit tests on the money and poll logic) |
 | Hosting | Vercel (auto-deploys from `main`) |
